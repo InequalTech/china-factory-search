@@ -111,8 +111,10 @@ Output `data`: the vetted factory list plus the `conversation_id` for follow-up 
 
 Sign-up grants welcome credits for real trial calls. Sandbox keys (`sk-tx-test-`) charge nothing and return static samples.
 
-## Rate limits
+## Rate limits & timeouts
 
-- General: 300 requests/min per app.
+- General: 10 QPS and 300 requests/min per key, all capabilities combined. Quota is per app and shared across MCP and REST — switching transport does not grant extra quota.
 - Slow lane (`factory_deepdive` + `factory_agent_search`, shared counter): 6/min. Sandbox keys are exempt.
-- Over limit → `code: 42900`. Back off and retry; serialize slow-lane calls instead of fanning out.
+- `factory_contact` additionally: 1 QPS, and max 500 calls per app per day.
+- Over limit → `code: 42900`, nothing is charged. No `Retry-After` header — use fixed exponential backoff (1s / 2s / 4s) and serialize slow-lane calls instead of fanning out.
+- Client timeouts: 30 s is enough for `factory_search` / `factory_detail` / `factory_contact`; set **≥ 120 s** for `factory_deepdive` and **≥ 180 s** for `factory_agent_search` — default 10 s timeouts will cut them off mid-run and look like an outage.
