@@ -68,6 +68,6 @@ curl -s .../factory_contact -H "Authorization: Bearer $TIANXIA_API_KEY" \
 | `40201` | Insufficient credits | Ask user to top up in the console |
 | `40300` | Capability not enabled for this app | Enable it in the console app settings |
 | `40400` | Company not found | Verify `company_id` came from a search result |
-| `42900` | Rate limited (300/min general, 6/min slow lane) | Back off; serialize slow-lane calls |
+| `42900` | Rate limited (300/min general; 6/min slow lane; contact 1 QPS & 500/day) | Back off (1s/2s/4s); serialize slow-lane calls |
 
 Full API reference, pricing, and client setup: [references/api.md](references/api.md) · [references/clients.md](references/clients.md)
