@@ -43,10 +43,12 @@ Input:
 | `city` | string | no | e.g. `"宁波市"` |
 | `district` | string | no | e.g. `"北仑区"` |
 | `industry` | string | no | Industry code from `/meta/industries`, e.g. `"C35"` or `"C3591"` (prefix expands to the whole subtree). Unknown code → `40000` |
-| `page` | int | no | Default 1 |
-| `per_page` | int | no | Default 20 |
+| `page` | int | no | Default 1, **max 100** (higher → `40000`, never truncated) |
+| `per_page` | int | no | Default 20, **max 50** (higher → `40000`, never truncated) |
 
 Output `data`: `{total, page, per_page, items: []}`. Each item: `{id, name, region, industry, core_name, product, ...}` — `id` is the `company_id` used by every other capability.
+
+Pagination ceiling: `per_page` 50 × `page` 100 = **at most 5,000 rows per query**. To export more, slice the query by region or industry sub-code and dedupe by `items[].id` (see "Bulk list export" in SKILL.md). Billing is per call regardless of `per_page` — a zero-hit search still charges.
 
 ### factory_detail
 
