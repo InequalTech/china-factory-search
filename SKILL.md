@@ -41,6 +41,19 @@ Backed by the [Tianxia Gongchang open platform](https://www.tianxiagongchang.com
 6. **Industry codes** (`industry`, e.g. `"C35"`) come from `GET /open/v1/meta/industries`; region trees from `GET /open/v1/meta/regions`. Both free with any key. Don't guess codes — an unknown code returns `code: 40000`, it is never silently ignored.
 7. **Credits are transparent.** Every envelope reports `credits_charged` and `credits_balance`. If the user asks about cost, read it from the response instead of estimating. On `40201` (insufficient credits), point the user to the console to top up.
 
+## Bulk list export
+
+When the user wants a batch of factories exported (CSV, spreadsheet, CRM import), follow this recipe instead of inventing a paging strategy:
+
+1. **Paginate `factory_search` only.** `factory_agent_search` has no pagination and is slow/expensive; `factory_detail` / `factory_contact` are per-company enrichment for after the list is settled.
+2. **Probe `total` first**: call page 1 with `per_page: 50`, read `data.total`, then size the job and tell the user the cost before continuing. Billing is per call, not per row — always use `per_page: 50` (at 20 you pay 2.5× for the same data). Cost = ceil(N / 50) calls × 400 credits. A zero-hit search still charges, so validate the query once before batch-paging.
+3. **Page serially** from 1 to ceil(total/50); on `42900` back off 1s/2s/4s and retry the page. Don't parallelize — quota is per app, concurrency just trips the limiter sooner.
+4. **Hard ceiling: 5,000 rows per query** (`page` ≤ 100). If `total` exceeds it, slice the query — per `city` first, then `district`, or industry sub-codes (both from the free meta endpoints) — and dedupe merged slices by `items[].id`.
+5. **Enrich selectively**: search rows already carry the registry summary + `phones_count`. `factory_detail` re-charges on repeat (cache results); call `factory_contact` only for finalists (1 QPS, 500/day per app, serial; repeat unlocks of the same company are free).
+6. **Persist progress** (done pages / seen ids / unlocked ids) so an interrupted run resumes without paying twice.
+
+Reference implementation (runnable Python, stdlib only) and the human-readable guide: <https://www.tianxiagongchang.com/open/docs/export>.
+
 ## REST quickstart
 
 ```bash
