@@ -39,7 +39,18 @@ Backed by the [Tianxia Gongchang open platform](https://www.tianxiagongchang.com
 4. **Typical funnel**: `factory_search` (or `factory_agent_search` for fuzzy asks) → shortlist → `factory_detail` → `factory_contact` only for finalists (it costs the most per useful record; repeat unlocks of the same company are free for your key).
 5. **Prefer `factory_agent_search` when the ask is fuzzy** ("find me mold makers around Zhejiang with export experience") — pass the user's request as `query`, in Chinese for best results. Prefer `factory_search` when you have concrete filters. Slow lane (`deepdive`, `agent_search`) is rate-limited to 6 calls/min — don't fan out in parallel.
 6. **Industry codes** (`industry`, e.g. `"C35"`) come from `GET /open/v1/meta/industries`; region trees from `GET /open/v1/meta/regions`. Both free with any key. Don't guess codes — an unknown code returns `code: 40000`, it is never silently ignored.
-7. **Credits are transparent.** Every envelope reports `credits_charged` and `credits_balance`. If the user asks about cost, read it from the response instead of estimating. On `40201` (insufficient credits), point the user to the console to top up.
+7. **Credits are transparent.** Every envelope reports `credits_charged` and `credits_balance`. If the user asks about cost, read it from the response instead of estimating. On `40201` (insufficient credits): if the tool list includes `credits_topup`, offer an in-chat top-up (see below); otherwise point the user to the console to top up.
+
+## In-chat top-up (WeChat Agent Pay)
+
+In clients that ship the `weixinpay` plugin (WorkBuddy, QClaw), the server may expose an extra `credits_topup` tool. When a call fails with `40201`, or the user asks to buy credits:
+
+1. Let the user pick a pack — `p10` (¥10), `p50` (¥50), `p200` (¥200). Present the options; don't default to the biggest. The response reports the exact credits that will arrive.
+2. Call `credits_topup {"pack": "p10"}`. The result contains `WeixinPay-Required`.
+3. Hand that value to the `weixinpay_pay` tool as `paymentCode` — it asks the user to authorize WeChat Pay. The payment code expires in ~14 minutes; if it expires unpaid, just call `credits_topup` again (nothing is charged for unpaid orders).
+4. After the user pays, credits land in the account automatically (usually within seconds). Retry the original call; if it still returns `40201`, wait about a minute and retry once more.
+
+Notes: only offer top-up when balance is actually insufficient or the user asks — never upsell mid-task. If the tool list has no `credits_topup` (other clients, or the feature is not enabled), fall back to the console: <https://www.tianxiagongchang.com/open/console>. Sandbox keys return a non-payable sample (`SANDBOX-NOT-PAYABLE`) — never hand that to `weixinpay_pay`.
 
 ## Bulk list export
 
@@ -78,7 +89,7 @@ curl -s .../factory_contact -H "Authorization: Bearer $TIANXIA_API_KEY" \
 |---|---|---|
 | `40000` | Invalid argument (unknown field, bad industry code) | Fix the body; don't retry as-is |
 | `40100` | Missing/invalid API key | Check header; get a key at the console |
-| `40201` | Insufficient credits | Ask user to top up in the console |
+| `40201` | Insufficient credits | Offer in-chat top-up via `credits_topup` if the tool exists (WorkBuddy/QClaw); otherwise console top-up |
 | `40300` | Capability not enabled for this app | Enable it in the console app settings |
 | `40400` | Company not found | Verify `company_id` came from a search result |
 | `42900` | Rate limited (300/min general; 6/min slow lane; contact 1 QPS & 500/day) | Back off (1s/2s/4s); serialize slow-lane calls |

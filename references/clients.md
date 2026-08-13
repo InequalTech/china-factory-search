@@ -5,7 +5,27 @@ One endpoint, one header — every client below is the same two facts in differe
 - Endpoint (Streamable HTTP): `https://open.tianxiagongchang.com/open/mcp`
 - Header: `Authorization: Bearer <API key>` — get a key at <https://www.tianxiagongchang.com/open/console>
 
-After connecting you should see five tools: `factory_search`, `factory_detail`, `factory_contact`, `factory_deepdive`, `factory_agent_search`.
+After connecting you should see five tools: `factory_search`, `factory_detail`, `factory_contact`, `factory_deepdive`, `factory_agent_search`. Clients with WeChat Agent Pay support (WorkBuddy, QClaw) may show a sixth, `credits_topup` — see SKILL.md "In-chat top-up".
+
+## WorkBuddy
+
+`~/.workbuddy/mcp.json` (user-level; or `<project>/.workbuddy/mcp.json` for one project). UI path: sidebar **Plugins → MCP Servers → Configure MCP**.
+
+```json
+{
+  "mcpServers": {
+    "tianxiagongchang": {
+      "type": "http",
+      "url": "https://open.tianxiagongchang.com/open/mcp",
+      "headers": {
+        "Authorization": "Bearer <API key>"
+      }
+    }
+  }
+}
+```
+
+`type` must be `http` (Streamable HTTP) — there is no separate `/sse` endpoint. WorkBuddy ships the `weixinpay` plugin, so in-chat credit top-up works here when the platform has it enabled.
 
 ## Claude Code
 
