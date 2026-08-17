@@ -1,16 +1,16 @@
-# API reference — Tianxia Gongchang open platform
+# 接口参考——天下工厂开放平台
 
-Two interchangeable transports, same capabilities, same input/output:
+两种可互换的传输方式，能力相同，出入参完全一致：
 
-- **MCP** (Streamable HTTP): `https://open.tianxiagongchang.com/open/mcp` — five tools named exactly like the capabilities below.
-- **REST**: `POST https://open.tianxiagongchang.com/open/v1/capabilities/<name>` — JSON body = tool arguments.
+- **MCP**（Streamable HTTP）：`https://open.tianxiagongchang.com/open/mcp`——五个工具，名字与下面的能力名一一对应。
+- **REST**：`POST https://open.tianxiagongchang.com/open/v1/capabilities/<能力名>`——JSON body 就是工具入参。
 
-Auth for both: `Authorization: Bearer <API key>`. Keys are created in the [developer console](https://www.tianxiagongchang.com/open/console).
+两者鉴权方式相同：`Authorization: Bearer <API 密钥>`。密钥在[开发者控制台](https://www.tianxiagongchang.com/open/console)创建。
 
-Machine-readable spec (public, no key): `GET https://open.tianxiagongchang.com/open/v1/meta/openapi.json`.
-Human docs: <https://www.tianxiagongchang.com/open/docs>.
+机器可读规范（公开，不需要密钥）：`GET https://open.tianxiagongchang.com/open/v1/meta/openapi.json`。
+给人看的文档：[开放平台文档中心](https://www.tianxiagongchang.com/open/docs)。
 
-## Response envelope
+## 统一响应格式
 
 ```json
 {
@@ -23,100 +23,100 @@ Human docs: <https://www.tianxiagongchang.com/open/docs>.
 }
 ```
 
-`code: 0` means success; anything else is an error (see table in SKILL.md). The envelope `code` is authoritative — MCP responses are always HTTP 200, REST mirrors the business code in the HTTP status.
+`code: 0` 表示成功，其余都是错误（错误码表见 SKILL.md）。**以响应体里的 `code` 为准**——MCP 响应永远是 HTTP 200，REST 会把业务码映射到 HTTP 状态码。
 
-Input validation is strict: unknown fields are rejected with `code: 40000`.
+入参校验严格：未知字段一律拒绝，返回 `code: 40000`。
 
-## Capabilities
+## 能力
 
 ### factory_search
 
-Search factories. All filters are AND-combined with the keyword.
+检索工厂。所有筛选条件与关键词之间是 AND 关系。
 
-Input:
+入参：
 
-| Field | Type | Required | Notes |
+| 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `keyword` | string | yes | Product/company keyword, **Simplified Chinese** for best recall |
-| `intent` | string | no | Search intent hint |
-| `province` | string | no | e.g. `"浙江省"` (full name with suffix) |
-| `city` | string | no | e.g. `"宁波市"` |
-| `district` | string | no | e.g. `"北仑区"` |
-| `industry` | string | no | Industry code from `/meta/industries`, e.g. `"C35"` or `"C3591"` (prefix expands to the whole subtree). Unknown code → `40000` |
-| `page` | int | no | Default 1, **max 100** (higher → `40000`, never truncated) |
-| `per_page` | int | no | Default 20, **max 50** (higher → `40000`, never truncated) |
+| `keyword` | string | 是 | 产品词或公司词，**用简体中文**召回最好 |
+| `intent` | string | 否 | 检索意图提示 |
+| `province` | string | 否 | 例如 `"浙江省"`（带后缀的全称） |
+| `city` | string | 否 | 例如 `"宁波市"` |
+| `district` | string | 否 | 例如 `"北仑区"` |
+| `industry` | string | 否 | 取自 `/meta/industries` 的行业码，例如 `"C35"` 或 `"C3591"`（按前缀展开整棵子树）。未知码 → `40000` |
+| `page` | int | 否 | 默认 1，**最大 100**（超过报 `40000`，绝不静默截断） |
+| `per_page` | int | 否 | 默认 20，**最大 50**（超过报 `40000`，绝不静默截断） |
 
-Output `data`: `{total, page, per_page, items: []}`. Each item: `{id, name, region, industry, core_name, product, ...}` — `id` is the `company_id` used by every other capability.
+出参 `data`：`{total, page, per_page, items: []}`。每条 item 形如 `{id, name, region, industry, core_name, product, ...}`——其中 `id` 就是其他所有能力用的 `company_id`。
 
-Pagination ceiling: `per_page` 50 × `page` 100 = **at most 5,000 rows per query**. To export more, slice the query by region or industry sub-code and dedupe by `items[].id` (see "Bulk list export" in SKILL.md). Billing is per call regardless of `per_page` — a zero-hit search still charges.
+翻页上限：`per_page` 50 × `page` 100 = **单次查询最多 5000 行**。要导出更多，就按地区或行业子码切分查询条件，再按 `items[].id` 去重（见 SKILL.md「批量导出名单」）。计费按调用次数、与 `per_page` 无关，零命中的检索同样计费。
 
 ### factory_detail
 
-Input: `{"company_id": <int>}` (required, from a search result).
+入参：`{"company_id": <int>}`（必填，取自检索结果）。
 
-Output `data`: full profile — registration info, capital, establishment date, business status, business scope, products/services, tags (e.g. verified-factory), address. Field names are snake_case.
+出参 `data`：完整企业档案——工商注册信息、注册资本、成立日期、经营状态、经营范围、产品与服务、标签（例如已核实工厂）、地址。字段名是 snake_case。
 
 ### factory_contact
 
-Input: `{"company_id": <int>}` (required).
+入参：`{"company_id": <int>}`（必填）。
 
-Output `data`: contact records, each with the value (`val`), holder name, and position where known.
+出参 `data`：联系方式记录，每条包含号码本身（`val`）、持有人姓名、以及已知的职务。
 
-Billing note: unlocking the **same company again with the same app is free** — dedup is server-side. Batch-unlocking many companies is the main cost driver; shortlist first.
+计费说明：**同一个应用重复解锁同一家公司免费**，去重在服务端做。批量解锁是主要成本项，先收敛短名单再解锁。
 
 ### factory_deepdive
 
-AI deep-dive on one factory: what it actually makes, capability signals, verification against web sources. Long-running (30–90 s).
+对单家工厂做 AI 深度尽调：它实际做什么、能力信号如何、并对着公开网络信息做核实。长耗时（30～90 秒）。
 
-Input:
+入参：
 
-| Field | Type | Required |
+| 字段 | 类型 | 必填 |
 |---|---|---|
-| `company_id` | int | yes |
-| `company_name` | string | yes |
-| `product` | string | no — focus the dive on a product line |
+| `company_id` | int | 是 |
+| `company_name` | string | 是 |
+| `product` | string | 否——指定某条产品线，把尽调聚焦在这条产品线上 |
 
-Output `data`: structured deep-dive report.
+出参 `data`：结构化的尽调报告。
 
 ### factory_agent_search
 
-Natural-language sourcing: a built-in agent parses intent, plans filters, searches, verifies candidates, and returns a vetted list. Long-running (30–90 s). Best with Chinese queries.
+自然语言找厂：内置 Agent 解析意图、规划筛选条件、检索、核实候选，返回一份筛过的名单。长耗时（30～90 秒），中文提问效果最好。
 
-Input:
+入参：
 
-| Field | Type | Required | Notes |
+| 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `query` | string | yes | e.g. `"浙江一带做注塑模具、有出口经验的厂"` |
-| `conversation_id` | string | no | Pass the previous response's conversation id to refine iteratively |
+| `query` | string | 是 | 例如 `"浙江一带做注塑模具、有出口经验的厂"` |
+| `conversation_id` | string | 否 | 传上一次响应里的 conversation id，可以多轮迭代收敛 |
 
-Output `data`: the vetted factory list plus the `conversation_id` for follow-up turns. Over REST this returns synchronously (no streaming).
+出参 `data`：筛过的工厂名单，外加下一轮要用的 `conversation_id`。走 REST 时是同步返回，没有流式。
 
-## Free metadata endpoints (any valid key, no credits charged)
+## 免费的元数据接口（任意有效密钥，不扣积分）
 
-| Endpoint | Returns |
+| 接口 | 返回 |
 |---|---|
-| `GET /open/v1/meta/regions` | Province / city / district tree (official names) |
-| `GET /open/v1/meta/industries` | 4-level industry code tree — source of `industry` values |
-| `GET /open/v1/meta/openapi.json` | OpenAPI 3.1 spec (public, no key needed) |
+| `GET /open/v1/meta/regions` | 省/市/区三级树（官方标准名称） |
+| `GET /open/v1/meta/industries` | 四级行业码树——`industry` 入参的取值来源 |
+| `GET /open/v1/meta/openapi.json` | OpenAPI 3.1 规范（公开，不需要密钥） |
 
-## Pricing (2026-07)
+## 计价（2026-07）
 
-2,000 credits = ¥1. Every response reports exact `credits_charged` / `credits_balance`.
+2000 积分 = ¥1。每个响应都会写明本次实际的 `credits_charged` 与 `credits_balance`。
 
-| Capability | Credits / call | ≈ CNY |
+| 能力 | 积分/次 | 约合人民币 |
 |---|---|---|
 | `factory_search` | 400 | ¥0.20 |
 | `factory_detail` | 200 | ¥0.10 |
-| `factory_contact` | 400 (repeat same company: 0) | ¥0.20 |
+| `factory_contact` | 400（同一家公司重复解锁：0） | ¥0.20 |
 | `factory_deepdive` | 500 | ¥0.25 |
 | `factory_agent_search` | 200 | ¥0.10 |
 
-Sign-up grants welcome credits for real trial calls. Sandbox keys (`sk-tx-test-`) charge nothing and return static samples.
+注册即送体验积分，可以直接打真实调用。沙箱密钥（`sk-tx-test-` 前缀）不计费，返回固定示例数据。
 
-## Rate limits & timeouts
+## 限流与超时
 
-- General: 10 QPS and 300 requests/min per key, all capabilities combined. Quota is per app and shared across MCP and REST — switching transport does not grant extra quota.
-- Slow lane (`factory_deepdive` + `factory_agent_search`, shared counter): 6/min. Sandbox keys are exempt.
-- `factory_contact` additionally: 1 QPS, and max 500 calls per app per day.
-- Over limit → `code: 42900`, nothing is charged. No `Retry-After` header — use fixed exponential backoff (1s / 2s / 4s) and serialize slow-lane calls instead of fanning out.
-- Client timeouts: 30 s is enough for `factory_search` / `factory_detail` / `factory_contact`; set **≥ 120 s** for `factory_deepdive` and **≥ 180 s** for `factory_agent_search` — default 10 s timeouts will cut them off mid-run and look like an outage.
+- 通用：每个密钥 10 QPS、300 次/分钟，所有能力合并计算。配额按应用算，且 MCP 与 REST 共享——换传输方式不会多给配额。
+- 慢通道（`factory_deepdive` + `factory_agent_search`，共用计数器）：6 次/分钟。沙箱密钥豁免。
+- `factory_contact` 额外限制：1 QPS，且每个应用每天最多 500 次。
+- 超限返回 `code: 42900`，不计费。响应不带 `Retry-After` 头，请用固定的指数退避（1 秒 / 2 秒 / 4 秒），慢通道调用串行化而不是并发扇出。
+- 客户端超时：`factory_search` / `factory_detail` / `factory_contact` 给 30 秒足够；`factory_deepdive` 要设 **≥ 120 秒**，`factory_agent_search` 要设 **≥ 180 秒**——默认 10 秒的超时会把它们从中间掐断，看起来就像服务挂了。

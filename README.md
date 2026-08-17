@@ -1,6 +1,10 @@
 # China Factory Search — Agent Skill
 
-Give your AI agent the ability to search **4.8 million verified Chinese factories** — by product, industry, and region — fetch full company profiles and contact info, and run AI-powered supplier vetting. Works with Claude Code, Cursor, Codex, and any agent that supports [Agent Skills](https://agentskills.io) or MCP.
+**English** · [简体中文](README.zh-CN.md)
+
+Give your AI agent the ability to search **4.8 million verified Chinese factories** — by product, industry, and region — fetch full company profiles and contact info, and run AI-powered supplier vetting. Works with WorkBuddy, Claude Code, Cursor, Codex, and any agent that supports [Agent Skills](https://agentskills.io) or MCP.
+
+> The skill instructions (`SKILL.md`) and API reference are written in Chinese — that is the language the underlying factory index and most of its users speak, and every LLM reads it fine. This README is the English entry point.
 
 Powered by the [Tianxia Gongchang open platform](https://www.tianxiagongchang.com/open/docs) (天下工厂开放平台).
 

@@ -1,15 +1,15 @@
-# MCP client setup
+# MCP 客户端配置
 
-One endpoint, one header — every client below is the same two facts in different config syntax:
+一个端点、一个请求头——下面每个客户端都是这两件事换一种配置语法而已：
 
-- Endpoint (Streamable HTTP): `https://open.tianxiagongchang.com/open/mcp`
-- Header: `Authorization: Bearer <API key>` — get a key at <https://www.tianxiagongchang.com/open/console>
+- 端点（Streamable HTTP）：`https://open.tianxiagongchang.com/open/mcp`
+- 请求头：`Authorization: Bearer <API 密钥>`——密钥到[开发者控制台](https://www.tianxiagongchang.com/open/console)申请
 
-After connecting you should see five tools: `factory_search`, `factory_detail`, `factory_contact`, `factory_deepdive`, `factory_agent_search`. Clients with WeChat Agent Pay support (WorkBuddy, QClaw) may show a sixth, `credits_topup` — see SKILL.md "In-chat top-up".
+连上之后应该能看到五个工具：`factory_search`、`factory_detail`、`factory_contact`、`factory_deepdive`、`factory_agent_search`。支持微信 Agent Pay 的客户端（WorkBuddy、QClaw）可能会多出第六个 `credits_topup`，见 SKILL.md「对话内充值」。
 
 ## WorkBuddy
 
-`~/.workbuddy/mcp.json` (user-level; or `<project>/.workbuddy/mcp.json` for one project). UI path: sidebar **Plugins → MCP Servers → Configure MCP**.
+配置文件 `~/.workbuddy/mcp.json`（用户级；只对单个项目生效就放 `<项目目录>/.workbuddy/mcp.json`）。界面路径：侧边栏 **插件 → MCP 服务器 → 配置 MCP**。
 
 ```json
 {
@@ -18,28 +18,28 @@ After connecting you should see five tools: `factory_search`, `factory_detail`, 
       "type": "http",
       "url": "https://open.tianxiagongchang.com/open/mcp",
       "headers": {
-        "Authorization": "Bearer <API key>"
+        "Authorization": "Bearer <API 密钥>"
       }
     }
   }
 }
 ```
 
-`type` must be `http` (Streamable HTTP) — there is no separate `/sse` endpoint. WorkBuddy ships the `weixinpay` plugin, so in-chat credit top-up works here when the platform has it enabled.
+`type` 必须是 `http`（Streamable HTTP），平台没有单独的 `/sse` 端点。WorkBuddy 自带 `weixinpay` 插件，所以平台侧开启该功能后，可以在对话内直接充值积分。
 
 ## Claude Code
 
 ```bash
 claude mcp add --transport http tianxiagongchang \
   "https://open.tianxiagongchang.com/open/mcp" \
-  --header "Authorization: Bearer <API key>"
+  --header "Authorization: Bearer <API 密钥>"
 ```
 
-Verify: `claude mcp list` → `tianxiagongchang: ... - ✓ Connected`.
+验证：`claude mcp list` → `tianxiagongchang: ... - ✓ Connected`。
 
-## Cursor / generic `mcp.json`
+## Cursor 及通用 `mcp.json`
 
-`~/.cursor/mcp.json` (or project-level `.cursor/mcp.json`; same shape works for most JSON-configured clients):
+配置文件 `~/.cursor/mcp.json`（或项目级的 `.cursor/mcp.json`；大多数用 JSON 配置的客户端都吃这个结构）：
 
 ```json
 {
@@ -47,34 +47,34 @@ Verify: `claude mcp list` → `tianxiagongchang: ... - ✓ Connected`.
     "tianxiagongchang": {
       "url": "https://open.tianxiagongchang.com/open/mcp",
       "headers": {
-        "Authorization": "Bearer <API key>"
+        "Authorization": "Bearer <API 密钥>"
       }
     }
   }
 }
 ```
 
-Some clients want an explicit transport field — add `"type": "streamable-http"` alongside `url` if required.
+有些客户端要求显式写传输方式，那就在 `url` 旁边补一个 `"type": "streamable-http"`。
 
 ## Codex CLI
 
-`~/.codex/config.toml`:
+配置文件 `~/.codex/config.toml`：
 
 ```toml
 [mcp_servers.tianxiagongchang]
 url = "https://open.tianxiagongchang.com/open/mcp"
 
 [mcp_servers.tianxiagongchang.headers]
-Authorization = "Bearer <API key>"
+Authorization = "Bearer <API 密钥>"
 ```
 
-## Coze / Dify / other platforms
+## 扣子 Coze / Dify 等平台
 
-Both support adding a custom MCP server: choose remote / Streamable HTTP, paste the endpoint URL, and set the `Authorization` header. Platforms that only take an OpenAPI spec instead can import `https://open.tianxiagongchang.com/open/v1/meta/openapi.json` and call the REST form directly.
+两者都支持添加自定义 MCP 服务器：选远程／Streamable HTTP，粘贴端点 URL，设置 `Authorization` 请求头即可。只接受 OpenAPI 规范的平台，可以直接导入 `https://open.tianxiagongchang.com/open/v1/meta/openapi.json`，按 REST 形式调用。
 
-## Sandbox smoke test
+## 沙箱冒烟测试
 
-With a sandbox key (`sk-tx-test-...`) any tool call returns static sample data without billing or touching real data — useful to verify the wiring before creating an account:
+用沙箱密钥（`sk-tx-test-...`）调任何工具都会返回固定示例数据，不计费、不碰真实数据——适合在用户开户之前先把链路跑通：
 
 ```bash
 curl -s https://open.tianxiagongchang.com/open/v1/capabilities/factory_search \
@@ -83,6 +83,6 @@ curl -s https://open.tianxiagongchang.com/open/v1/capabilities/factory_search \
   -d '{"keyword":"注塑模具"}'
 ```
 
-(That is the public sandbox key — it works as-is.)
+（这就是公共沙箱密钥，可以直接用。）
 
-A `code: 0` envelope with sample items means the path is good — swap in a real key and go.
+返回 `code: 0` 并带示例条目，说明链路通了——换成正式密钥即可开跑。
